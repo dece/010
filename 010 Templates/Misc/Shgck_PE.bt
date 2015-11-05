@@ -1,0 +1,279 @@
+//--------------------------------------
+//--- 010 Editor v5.0.2 Binary Template
+//
+// File: Yet another PE template
+// Author: Shgck
+// Revision: 1
+// Purpose: Trying to write my own template from scratch
+//--------------------------------------
+
+LittleEndian();
+DisplayFormatHex();
+
+
+
+//--------------------------------------
+// DOS header
+// http://www.delorie.com/djgpp/doc/exe/
+
+typedef struct {
+    byte magic[2] <bgcolor = 0xCCCCCC>;
+     DisplayFormatDecimal();
+    short bytes_in_last_block;
+    short num_blocks;
+    short num_relocations;
+    short num_paragraphs;
+    short min_needed_memory;
+    short max_needed_memory;
+     DisplayFormatHex();
+    ushort init_ss;
+    ushort init_sp;
+    short checksum;
+    ushort init_ip;
+    ushort init_cs;
+    short first_reloc_ofs;
+    short overlay;
+    short reserved1[4];
+    short oem_id;
+    short oem_info;
+    short reserved2[10];
+    uint pe_header_ofs;
+} DosHeader;
+
+
+
+//--------------------------------------
+// PE header (also called COFF header)
+
+enum <ushort> PeHeaderMachine {
+    I386        = 0x14C,
+    IA64        = 0x200,
+    AMD64       = 0x8664
+};
+
+enum <ushort> PeHeaderFlags {
+    PEHDR_NORELOC  = 0x1,
+    PEHDR_EXEC_IMG = 0x2,
+    PEHDR_DLL      = 0x2000
+};
+
+typedef struct {
+    byte magic[4] <bgcolor = 0xCCCCCC>;
+    PeHeaderMachine machine;
+    ushort num_sections <format = decimal>;
+    uint timestamp;
+    uint symbol_table_ofs;
+    uint num_symbols;
+    ushort opt_header_size;
+    PeHeaderFlags flags;
+} PeHeader;
+
+
+
+//--------------------------------------
+// Optional header
+
+enum <ushort> OptHeaderMagic {
+    BITS_32 = 267,
+    BITS_64 = 523
+};
+
+enum <ushort> OptHeaderSubsystem {
+    UNKNOWN                  = 0,
+    NATIVE                   = 1,
+    GUI                      = 2,
+    CUI                      = 3,
+    OS2_CUI                  = 5,
+    POSIX_CUI                = 7,
+    WINDOWS_CE_GUI           = 9,
+    EFI_APPLICATION          = 10,
+    EFI_BOOT_DRIVER          = 11,
+    EFI_RUNTIME_DRIVER       = 12,
+    EFI_ROM                  = 13,
+    XBOX                     = 14,
+    WINDOWS_BOOT_APPLICATION = 16
+};
+
+enum <ushort> OptHeaderDllFlags {
+    OPTHDR_DLL_RELOC          = 0x40,
+    OPTHDR_DLL_FORCE_INTEG    = 0x80,
+    OPTHDR_DLL_NX_COMPAT      = 0x100,
+    OPTHDR_DLL_NO_ISOLATION   = 0x200,
+    OPTHDR_DLL_NO_SEH         = 0x400,
+    OPTHDR_DLL_NO_BIND        = 0x800,
+    OPTHDR_DLL_WDM_DRIVER     = 0x2000,
+    OPTHDR_DLL_TERMSERV_AWARE = 0x8000
+};
+
+typedef struct {
+    uint virtual_address;
+    uint size;
+    local int id;
+} DataDirectory <read = ReadDataDirectory, comment = CommentDataDirectory>;
+
+string ReadDataDirectory(DataDirectory& dir) {
+    string value;
+    SPrintf(value, "%X @ %X", dir.virtual_address, dir.size);
+    return value;
+}
+
+string CommentDataDirectory(DataDirectory& dir) {
+    string comment;
+    SPrintf(comment, "Dir %d", dir.id);
+    if (dir.id == 0)  Strcat(comment, ": exports");
+    if (dir.id == 1)  Strcat(comment, ": imports");
+    if (dir.id == 2)  Strcat(comment, ": resources");
+    if (dir.id == 3)  Strcat(comment, ": exceptions");
+    if (dir.id == 4)  Strcat(comment, ": certificates");
+    if (dir.id == 5)  Strcat(comment, ": base relocations");
+    if (dir.id == 6)  Strcat(comment, ": debugging");
+    if (dir.id == 7)  Strcat(comment, ": arch-specific data");
+    if (dir.id == 8)  Strcat(comment, ": global pointer register relative VA");
+    if (dir.id == 9)  Strcat(comment, ": thread local storage");
+    if (dir.id == 10) Strcat(comment, ": load configuration");
+    if (dir.id == 11) Strcat(comment, ": bounds imports");
+    if (dir.id == 12) Strcat(comment, ": import addresses");
+    if (dir.id == 13) Strcat(comment, ": delay import descriptors");
+    if (dir.id == 14) Strcat(comment, ": CLR header");
+    if (dir.id == 15) Strcat(comment, " (reserved)");
+    return comment;
+}
+
+void ParseDataDirectory(uint id) {
+    DataDirectory data_directory;
+    data_directory.id = id;
+}
+
+typedef struct {
+     DisplayFormatDecimal();
+    OptHeaderMagic magic <bgcolor = 0xCCCCCC>;
+    byte major_linker_version;
+    byte minor_linker_version;
+     DisplayFormatHex();
+    uint code_size;
+    uint idata_size;
+    uint udata_size;
+    uint entry_point_address <comment = "Where execution starts">;
+    uint code_base;
+    uint data_base;
+    uint image_base;
+    uint section_alignment   <comment = "Where sections starts in memory">;
+    uint file_alignment      <comment = "Where sections starts in file">;
+     DisplayFormatDecimal();
+    ushort major_os_version;
+    ushort minor_os_version;
+    ushort major_image_version;
+    ushort minor_image_version;
+    ushort major_subsystem_version;
+    ushort minor_subsystem_version;
+    uint win32_value;
+     DisplayFormatHex();
+    uint image_size;
+    uint headers_size;
+    uint checksum;
+    OptHeaderSubsystem subsystem;
+    ushort dll_flags;
+    uint stack_reserve_size;
+    uint stack_commit_size;
+    uint heap_reserve_size;
+    uint heap_commit_size;
+    uint loader_flags        <comment = "Obsolete">;
+    uint num_rva_and_sizes;
+    local uint data_dir_id;
+    for (data_dir_id = 0; data_dir_id < 16; data_dir_id += 1)
+        ParseDataDirectory(data_dir_id);
+} OptHeader;
+
+
+
+//--------------------------------------
+// Section table
+
+enum SectionTableEntryFlags {
+    STE_CODE   = 0x20,
+    STE_IDATA  = 0x40,
+    STE_UDATA  = 0x80,
+    STE_INFO   = 0x200,
+    STE_REMOVE = 0x800,
+    STE_COMDAT = 0x1000,
+    STE_SHARED = 0x10000000,
+    STE_EXEC   = 0x20000000,
+    STE_READ   = 0x40000000,
+    STE_WRITE  = 0x80000000,
+};
+
+typedef struct {
+    char name[8] <bgcolor = 0xDDDDDD>;
+    uint virtual_size;
+    uint virtual_address;
+    uint raw_data_size;
+    uint raw_data_ofs;
+    uint relocations_ofs;
+    uint line_numbers_ofs;
+    ushort num_relocations;
+    ushort num_line_numbers;
+    uint flags <comment = CommentSectionTableEntryFlags>;
+} SectionTableEntry <read = ReadSectionTableEntry> ;
+
+string CommentSectionTableEntryFlags(uint flags) {
+    string comment;
+    if (flags & STE_CODE)   comment += "CODE ";
+    if (flags & STE_IDATA)  comment += "IDATA ";
+    if (flags & STE_UDATA)  comment += "UDATA ";
+    if (flags & STE_EXEC)   comment += "X ";
+    if (flags & STE_READ)   comment += "R ";
+    if (flags & STE_WRITE)  comment += "W ";
+    comment = SubStr(comment, 0, Strlen(comment) - 1);
+    return comment;
+}
+
+string ReadSectionTableEntry(SectionTableEntry& entry) {
+    string flags_comment = CommentSectionTableEntryFlags(entry.flags);
+    string value;
+    SPrintf(value, "%s (%s)", entry.name, flags_comment);
+    return value;
+}
+
+
+
+//--------------------------------------
+// Code section
+
+void ParseCodeSection(SectionTableEntry& section_entry) {
+    FSeek(section_entry.raw_data_ofs);
+    byte code[section_entry.raw_data_size] <bgcolor = 0xCCCCFF>;
+}
+
+
+
+//--------------------------------------
+// Data section
+
+void ParseDataSection(SectionTableEntry& section_entry) {
+    FSeek(section_entry.raw_data_ofs);
+}
+
+
+
+//--------------------------------------
+// File structure
+
+DosHeader dos_header;
+
+FSeek(dos_header.pe_header_ofs);
+PeHeader pe_header;
+
+local int64 opt_header_ofs = FTell();
+OptHeader opt_header;
+
+local int64 section_table_ofs = opt_header_ofs + pe_header.opt_header_size;
+FSeek(section_table_ofs);
+SectionTableEntry section_table[pe_header.num_sections] <optimize = false>;
+
+local uint i;
+for (i = 0; i < pe_header.num_sections; i += 1) {
+    if (section_table[i].flags & STE_CODE)
+        ParseCodeSection(section_table[i]);
+    else if (section_table[i].flags & (STE_IDATA | STE_UDATA))
+        ParseDataSection(section_table[i]);
+}
