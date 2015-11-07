@@ -113,7 +113,7 @@ typedef struct {
 
 string ReadDataDirectory(DataDirectory& dir) {
     string value;
-    SPrintf(value, "%X @ %X", dir.virtual_address, dir.size);
+    SPrintf(value, "%X @ %X", dir.size, dir.virtual_address);
     return value;
 }
 
@@ -178,9 +178,9 @@ typedef struct {
     uint heap_reserve_size;
     uint heap_commit_size;
     uint loader_flags        <comment = "Obsolete">;
-    uint num_rva_and_sizes;
+    uint num_rva_and_sizes   <format = decimal, comment = "Number of data dirs (=16)">;
     local uint data_dir_id;
-    for (data_dir_id = 0; data_dir_id < 16; data_dir_id += 1)
+    for (data_dir_id = 0; data_dir_id < num_rva_and_sizes; data_dir_id += 1)
         ParseDataDirectory(data_dir_id);
 } OptHeader;
 
@@ -216,7 +216,7 @@ typedef struct {
 } SectionTableEntry <read = ReadSectionTableEntry> ;
 
 string CommentSectionTableEntryFlags(uint flags) {
-    string comment;
+    local string comment;
     if (flags & STE_CODE)   comment += "CODE ";
     if (flags & STE_IDATA)  comment += "IDATA ";
     if (flags & STE_UDATA)  comment += "UDATA ";
@@ -228,9 +228,10 @@ string CommentSectionTableEntryFlags(uint flags) {
 }
 
 string ReadSectionTableEntry(SectionTableEntry& entry) {
-    string flags_comment = CommentSectionTableEntryFlags(entry.flags);
-    string value;
-    SPrintf(value, "%s (%s)", entry.name, flags_comment);
+    local string value;
+    local string name = Strlen(entry.name) > 0 ? entry.name : "<unnamed>";
+    local string flags_comment = CommentSectionTableEntryFlags(entry.flags);
+    SPrintf(value, "%s (%s)", name, flags_comment);
     return value;
 }
 
@@ -266,9 +267,12 @@ PeHeader pe_header;
 local int64 opt_header_ofs = FTell();
 OptHeader opt_header;
 
+local uint import_dir_rva = opt_header.data_directory[1].virtual_address;
+
 local int64 section_table_ofs = opt_header_ofs + pe_header.opt_header_size;
 FSeek(section_table_ofs);
 SectionTableEntry section_table[pe_header.num_sections] <optimize = false>;
+PrintSectionTable();
 
 local uint i;
 for (i = 0; i < pe_header.num_sections; i += 1) {
@@ -276,4 +280,17 @@ for (i = 0; i < pe_header.num_sections; i += 1) {
         ParseCodeSection(section_table[i]);
     else if (section_table[i].flags & (STE_IDATA | STE_UDATA))
         ParseDataSection(section_table[i]);
+}
+
+
+
+void PrintSectionTable() {
+    local string sections_str = "Sections: ";
+    local string section_str;
+    local uint i;
+    for (i = 0; i < pe_header.num_sections; i += 1) {
+        SPrintf(section_str, "%s ", ReadSectionTableEntry(section_table[i]));
+        Strcat(sections_str, section_str);
+    }
+    Printf("%s\n", sections_str);
 }
