@@ -1,0 +1,439 @@
+//--------------------------------------
+//--- 010 Editor v5.0beta1 Binary Template
+//
+// File:     WMOgroup.bt
+// Author:   shgck (shoggothcake@gmail.com)
+// Revision: 0.1
+// Purpose:  tired to ^g to navigate through these files
+//--------------------------------------
+
+// Vector3D
+typedef struct
+{
+  float x, y, z;
+} Vector3D;
+
+// Face
+typedef struct
+{
+  uint16 a, b, c;
+} Face;
+
+// Polygon
+typedef struct
+{
+  unsigned byte flags <format=hex>;
+  byte material_id <format=decimal>;
+} Polygon;
+
+// UV Coordinate
+typedef struct
+{
+  float u, v;
+} UVCoord;
+
+// Color 0xAARRGGBB, BGRA
+typedef struct
+{
+  unsigned byte b, g, r, a;
+} BGRA;
+
+
+
+// Chunk
+typedef struct
+{
+  local uint32 offset = FTell();
+  local uint32 data_offset = offset + 8;
+
+  char magic[4];
+  uint32 size;
+} Header <read=ReadHeader>;
+
+string ReadHeader(Header& h)
+{
+  string str;
+  SPrintf(str, "%c%c%c%c (%u bytes)",
+          h.magic[3], h.magic[2], h.magic[1], h.magic[0], h.size);
+  return str;
+};
+
+
+
+
+
+// Unknown chunk
+typedef struct
+{
+  Header h;
+  while (FTell() < h.data_offset + h.size)
+  {
+    byte unk_byte;
+  }
+} unk_chunk;
+
+// uint16 ref chunk
+typedef struct
+{
+  Header h;
+  while (FTell() < h.data_offset + h.size)
+  {
+    uint16 ref;
+  }
+} uint16_ref_chunk;
+
+
+
+
+
+// MVER
+typedef struct
+{
+  Header h;
+  uint32 version;
+} MVER;
+
+
+
+// MOPY
+typedef struct
+{
+  Header h;
+
+  local int num_polygons;
+  while (FTell() < h.data_offset + h.size)
+  {
+    Polygon p;
+    ++num_polygons;
+  }
+
+} MOPY <read=GetMOPYValue>;
+
+string GetMOPYValue(MOPY& mopy)
+{
+  string str;
+  SPrintf(str, "%u polygons", mopy.num_polygons);
+  return str;
+}
+
+
+
+// MOVI
+typedef struct
+{
+  Header h;
+
+  local int num_faces;
+  while (FTell() < h.data_offset + h.size)
+  {
+    Face f;
+    ++num_faces;
+  }
+ 
+} MOVI <read=GetMOVIValue>;
+
+string GetMOVIValue(MOVI& movi)
+{
+  string str;
+  SPrintf(str, "%u faces", movi.num_faces);
+  return str;
+}
+
+
+
+// MOVT
+typedef struct
+{
+  Header h;
+
+  local int num_vertices;
+  while (FTell() < h.data_offset + h.size)
+  {
+    Vector3D v;
+    ++num_vertices;
+  }
+ 
+} MOVT <read=GetMOVTValue>;
+
+string GetMOVTValue(MOVT& movt)
+{
+  string str;
+  SPrintf(str, "%u vertices", movt.num_vertices);
+  return str;
+}
+
+
+
+// MONR
+typedef struct
+{
+  Header h;
+
+  local int num_normals;
+  while (FTell() < h.data_offset + h.size)
+  {
+    Vector3D n;
+    ++num_normals;
+  }
+ 
+} MONR <read=GetMONRValue>;
+
+string GetMONRValue(MONR& monr)
+{
+  string str;
+  SPrintf(str, "%u normals", monr.num_normals);
+  return str;
+}
+
+
+
+// MOTV
+typedef struct
+{
+  Header h;
+
+  local int num_coords;
+  while (FTell() < h.data_offset + h.size)
+  {
+    UVCoord uv;
+    ++num_coords;
+  }
+ 
+} MOTV <read=GetMOTVValue>;
+
+string GetMOTVValue(MOTV& motv)
+{
+  string str;
+  SPrintf(str, "%u coords", motv.num_coords);
+  return str;
+}
+
+
+
+// MOBA
+typedef struct
+{
+  int16 bb1[3];
+  int16 bb2[3];
+  uint32 first_index;
+  uint16 num_indices;
+  uint16 first_vertex;
+  uint16 last_vertex;
+  byte unknown;
+  unsigned byte material_id;
+} Batch;
+
+typedef struct
+{
+  Header h;
+
+  local int num_batches;
+  while (FTell() < h.data_offset + h.size)
+  {
+    Batch b;
+    ++num_batches;
+  }
+
+} MOBA <read=GetMOBAValue>;
+
+string GetMOBAValue(MOBA& moba)
+{
+  string str;
+  SPrintf(str, "%u batches", moba.num_batches);
+  return str;
+}
+
+
+
+// MOBS
+typedef struct
+{
+  Header h;
+  while (FTell() < h.data_offset + h.size)
+  {
+    byte unk;
+  }
+} MOBS;
+
+
+
+// MOBN
+typedef struct
+{
+  uint16 node_type;
+  uint16 child1;
+  uint16 child2;
+  uint16 num_faces;
+  uint32 first_face;
+  float f_dist;
+} BSPNode <read=GetBSPNodeValue>;
+
+string GetBSPNodeValue(BSPNode& node)
+{
+  string str;
+  switch (node.node_type)
+  {
+    case 0: SPrintf(str, "YZ-plane"); break;
+    case 1: SPrintf(str, "XZ-plane"); break;
+    case 2: SPrintf(str, "XY-plane"); break;
+    case 4: SPrintf(str, "Leaf"); break;
+    default: SPrintf(str, "unknown node type"); break;
+  }
+  return str;
+}
+
+typedef struct
+{
+  Header h;
+  while (FTell() < h.data_offset + h.size)
+  {
+    BSPNode node;
+  }
+} MOBN;
+
+
+
+// MOBR
+typedef uint16_ref_chunk MOBR;
+
+
+
+// MOCV
+typedef struct
+{
+  Header h;
+
+  local int num_colors;
+  while (FTell() < h.data_offset + h.size)
+  {
+    BGRA color;
+    ++num_colors;
+  }
+
+} MOCV <read=GetMOCVValue>;
+
+string GetMOCVValue(MOCV& mocv)
+{
+  string str;
+  SPrintf(str, "%u colors", mocv.num_colors);
+  return str;
+}
+
+
+
+// MLIQ
+typedef struct
+{
+  float x, y;
+} MLIQHeightMapEntry <read=GetMLIQHeightMapEntryValue>;
+
+string GetMLIQHeightMapEntryValue(MLIQHeightMapEntry& entry)
+{
+  string str;
+  SPrintf(str, "(%f, %f)", entry.x, entry.y);
+  return str;
+}
+
+typedef unsigned byte MLIQTypesEntry;
+
+typedef struct
+{
+  Header h;
+
+  uint32 x_verts;
+  uint32 y_verts;
+  uint32 x_tiles;
+  uint32 y_tiles;
+  float base_coords[3];
+  uint16 material_id;
+
+  local int i = 0;
+  while (i < x_verts * y_verts)
+  {
+    MLIQHeightMapEntry height;
+    ++i;
+  }
+  i = 0;
+  while (i < x_tiles * y_tiles)
+  {
+    MLIQTypesEntry type;
+    ++i;
+  }
+
+} MLIQ;
+
+
+
+// MOGP
+typedef struct
+{
+  uint32 group_name;
+  uint32 descriptive_name;
+  uint32 flags <format=hex>;
+  float bb1[3];
+  float bb2[3];
+  uint16 portal_index;
+  uint16 portal_num;
+  uint16 batches1;
+  uint16 batches2;
+  uint32 batches3;
+  unsigned byte fog_indices[4];
+  uint32 liquid_type;
+  uint32 group_id;
+  uint32 unknown1;
+  uint32 unknown2;
+} GroupHeader;
+
+typedef struct
+{
+  Header h;
+  GroupHeader group_header;
+
+  MOPY polygons;
+  MOVI faces;
+  MOVT vertices;
+  MONR normals;
+  MOTV uv_coords;
+  MOBA batches;
+
+  // I'm not sure about the next chunks order so I'll test their magic by hand
+  while (FTell() < h.data_offset + h.size)
+  {
+    if (CompareMagic("MOBS") == 0)
+      MOBS mobs;
+    else if (CompareMagic("MOBN") == 0)
+      MOBN mobn;
+    else if (CompareMagic("MOBR") == 0)
+      MOBR mobr;
+    else if (CompareMagic("MOCV") == 0)
+      MOCV mocv;
+    else if (CompareMagic("MLIQ") == 0)
+      MLIQ mliq;
+    else 
+      unk_chunk chunk;
+  }
+} MOGP;
+
+// Return 0 if next chunk matches magic
+byte CompareMagic(char magic[])
+{
+  if (ReadByte(FTell()    ) == magic[3] &&
+      ReadByte(FTell() + 1) == magic[2] &&
+      ReadByte(FTell() + 2) == magic[1] &&
+      ReadByte(FTell() + 3) == magic[0])
+    return 0;
+  else
+    return 1;
+}
+
+
+
+
+
+
+
+struct
+{
+  MVER version;
+  MOGP group;
+} WMOGroup;
