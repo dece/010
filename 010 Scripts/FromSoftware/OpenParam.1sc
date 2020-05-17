@@ -2,7 +2,7 @@
 //--- 010 Editor v2.0 Script File
 //
 //      File: OpenParam.1sc
-//   Authors: dece
+//   Authors: dece <shgck@pistache.land>
 //   Version: 1.0
 //   Purpose: Parse both PARAMDEF and PARAM files
 //  Category: Binary
@@ -10,6 +10,9 @@
 // Run the PARAMDEF template on a PARAMDEF file, load the original
 // PARAM template to replace the original dummy parsing with PARAMDEF
 // aware types and run it on a PARAM file.
+//
+// Require 010 Editor to add the SoulsTemplates repo in the
+// compiler directory settings.
 //------------------------------------------------
 RequiresVersion(4.0);
 
