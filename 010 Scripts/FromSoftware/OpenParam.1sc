@@ -102,7 +102,11 @@ for (i = 0; i < num_fields; ++i) {
         case 'Q': SPrintf(field_str, "unsigned quad %s%s;\n", field_name, bf); break;
         case 'f': SPrintf(field_str, "float %s%s;\n", field_name, bf); break;
         case 'd': SPrintf(field_str, "double %s%s;\n", field_name, bf); break;
-        default: SPrintf(field_str, "char %s[%d]%s;\n", field_name, sizes[i], bf);
+        default:
+            if (bit_sizes[i] == -1)
+                SPrintf(field_str, "char %s[%d];\n", field_name, sizes[i]);
+            else
+                SPrintf(field_str, "byte %s%s;\n", field_name, bf);
     }
     WriteString(offset, field_str);
     offset += Strlen(field_str);
